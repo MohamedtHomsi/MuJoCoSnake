@@ -1,0 +1,141 @@
+<mujoco model="simple_snake">
+  <option timestep="0.005" gravity="0 0 -9.81"/>
+  <compiler angle="degree" coordinate="local" inertiafromgeom="true"/>
+  <default>
+    <geom type="capsule" size="0.02 0.1" rgba="0.2 0.7 0.2 1" friction="0.7 0.1 0.1"/>
+    <joint limited="true" range="-30 30" damping="0.05" stiffness="1"/>
+  </default>
+
+  <worldbody>
+    <light diffuse="1 1 1" pos="0 0 3" dir="0 0 -1"/>
+    <geom type="plane" size="2 2 0.1" rgba="0.8 0.8 0.8 1"/>
+
+    <body name="seg0" pos="0 0 0.05">
+      <joint name="root_free" type="free"/>
+      <geom/>
+
+      <body name="seg1" pos="0.18 0 0">
+        <joint name="j1" type="hinge" axis="0 0 1"/>
+        <geom/>
+
+        <body name="seg2" pos="0.18 0 0">
+          <joint name="j2" type="hinge" axis="0 0 1"/>
+          <geom/>
+
+          <body name="seg3" pos="0.18 0 0">
+            <joint name="j3" type="hinge" axis="0 0 1"/>
+            <geom/>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <position name="a1" joint="j1" kp="20"/>
+    <position name="a2" joint="j2" kp="20"/>
+    <position name="a3" joint="j3" kp="20"/>
+  </actuator>
+</mujoco>
+
+<mujoco model="screw_snake">
+  <compiler angle="degree" coordinate="local" autolimits="true"/>
+  <option timestep="0.002" gravity="0 0 -9.81" integrator="RK4" iterations="100"/>
+
+  <!-- Materials and defaults -->
+  <default>
+    <geom rgba="0.8 0.8 0.8 1" condim="3" friction="1.0 0.005 0.0005" solref="0.005 1" solimp="0.9 0.9 0.01"/>
+    <joint armature="0.002" damping="0.1" frictionloss="0.0" limited="false"/>
+    <motor ctrllimited="false"/>
+  </default>
+
+  <asset>
+    <!-- no external meshes; keep it simple -->
+  </asset>
+
+  <worldbody>
+    <!-- Ground -->
+    <geom name="ground" type="plane" size="5 5 0.1" rgba="0.2 0.25 0.3 1" friction="1.2 0.005 0.0005"/>
+
+    <!-- Base (free) body for the snake -->
+    <body name="snake_base" pos="0 0 0.08">
+      <!-- Free joint so the whole thing can move -->
+      <joint name="root_free" type="free"/>
+
+      <!-- A lightweight chassis that holds the two coaxial screws -->
+      <geom name="chassis" type="box" size="0.12 0.05 0.02" pos="0 0 0.02" rgba="0.3 0.35 0.4 1" mass="0.2"/>
+
+      <!-- Right-hand screw (positive x half) -->
+      <body name="screw_right" pos="0.15 0 0">
+        <!-- Rotates about x-axis -->
+        <joint name="jr" type="hinge" axis="1 0 0" pos="0 0 0" damping="0.002"/>
+
+        <!-- Core cylinder -->
+        <geom name="core_r" type="cylinder" fromto="-0.15 0 0  0.15 0 0" size="0.05" rgba="0.8 0.1 0.1 1" mass="0.3" friction="1.0 0.01 0.001"/>
+
+        <!-- Helical ridges to approximate a right-hand thread -->
+        <!-- We place N short capsules around the cylinder in a helix -->
+        <!-- Parameters: radius ~ 0.055, capsule length ~ 0.06 -->
+        <!-- Right-hand: angle increases with +x -->
+        <!-- Tweak N, P (pitch) for visual/physical fidelity -->
+        <!-- NOTE: duplicated programmatically would be nicer, but here it's explicit to stay single-file -->
+        <!-- Generate 24 segments along x, each with 6 ribs around circumference -->
+        <!-- We’ll hand-write a smaller set for readability; increase counts if you want more bite -->
+        <geom type="capsule" fromto="-0.12 0.055 0  -0.06 0.055 0" size="0.006" rgba="0.9 0.4 0.4 1"/>
+        <geom type="capsule" fromto="-0.09 0.039 0.039  -0.03 0.039 0.039" size="0.006" rgba="0.9 0.4 0.4 1"/>
+        <geom type="capsule" fromto="-0.06 0 0.055  0 0 0.055" size="0.006" rgba="0.9 0.4 0.4 1"/>
+        <geom type="capsule" fromto="-0.03 -0.039 0.039  0.03 -0.039 0.039" size="0.006" rgba="0.9 0.4 0.4 1"/>
+        <geom type="capsule" fromto="0  -0.055 0  0.06 -0.055 0" size="0.006" rgba="0.9 0.4 0.4 1"/>
+        <geom type="capsule" fromto="0.03 -0.039 -0.039  0.09 -0.039 -0.039" size="0.006" rgba="0.9 0.4 0.4 1"/>
+        <geom type="capsule" fromto="0.06 0 -0.055  0.12 0 -0.055" size="0.006" rgba="0.9 0.4 0.4 1"/>
+
+        <!-- End caps (visual) -->
+        <geom type="sphere" pos="-0.15 0 0" size="0.05" rgba="0.8 0.1 0.1 1" mass="0.01"/>
+        <geom type="sphere" pos="0.15 0 0" size="0.05" rgba="0.8 0.1 0.1 1" mass="0.01"/>
+      </body>
+
+      <!-- Left-hand screw (negative x half) -->
+      <body name="screw_left" pos="-0.15 0 0">
+        <joint name="jl" type="hinge" axis="1 0 0" pos="0 0 0" damping="0.002"/>
+
+        <!-- Core cylinder -->
+        <geom name="core_l" type="cylinder" fromto="-0.15 0 0  0.15 0 0" size="0.05" rgba="0.1 0.6 0.9 1" mass="0.3" friction="1.0 0.01 0.001"/>
+
+        <!-- Helical ridges to approximate a left-hand thread (opposite helix) -->
+        <!-- Left-hand: angle decreases with +x -->
+        <geom type="capsule" fromto="-0.12 -0.055 0  -0.06 -0.055 0" size="0.006" rgba="0.4 0.7 1 1"/>
+        <geom type="capsule" fromto="-0.09 -0.039 0.039  -0.03 -0.039 0.039" size="0.006" rgba="0.4 0.7 1 1"/>
+        <geom type="capsule" fromto="-0.06 0 0.055  0 0 0.055" size="0.006" rgba="0.4 0.7 1 1"/>
+        <geom type="capsule" fromto="-0.03 0.039 0.039  0.03 0.039 0.039" size="0.006" rgba="0.4 0.7 1 1"/>
+        <geom type="capsule" fromto="0  0.055 0  0.06 0.055 0" size="0.006" rgba="0.4 0.7 1 1"/>
+        <geom type="capsule" fromto="0.03 0.039 -0.039  0.09 0.039 -0.039" size="0.006" rgba="0.4 0.7 1 1"/>
+        <geom type="capsule" fromto="0.06 0 -0.055  0.12 0 -0.055" size="0.006" rgba="0.4 0.7 1 1"/>
+
+        <geom type="sphere" pos="-0.15 0 0" size="0.05" rgba="0.1 0.6 0.9 1" mass="0.01"/>
+        <geom type="sphere" pos="0.15 0 0" size="0.05" rgba="0.1 0.6 0.9 1" mass="0.01"/>
+      </body>
+
+    </body>
+  </worldbody>
+
+  <!-- Equality constraint to gear the two hinge joints together with opposite sign.
+       jr + 1*jl = 0  => jl = -jr -->
+  <equality>
+  <!-- jr + 1*jl = 0  =>  jl = -jr -->
+  <joint name="counter_rotate" joint1="jr" joint2="jl" gear="1"/>
+</equality>
+  <!-- Actuation: one motor on jr; jl follows via the gear constraint -->
+  <actuator>
+    <!-- A velocity servo is most stable for continuous rotation locomotion.
+         ctrl value is desired angular velocity (rad/s) about +x for jr -->
+    <velocity name="motor" joint="jr" kv="50"/>
+  </actuator>
+
+  <!-- A simple camera to watch the motion -->
+  <visual>
+    <map znear="0.005" zfar="20"/>
+  </visual>
+  <keyframe>
+    <key name="start" qpos="0 0 0   1 0 0 0   0 0 0  0 0"/>
+  </keyframe>
+</mujoco>

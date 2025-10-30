@@ -1,0 +1,50 @@
+Assumptions:
+1) Geometry is such that the helix blades slide on readily and normal component of weight will be supported by the base drum.
+2) Coefficient of friction between screw and ground is constant.
+3) Forces acting on helix blade are effectively concentrated at a radius corresponding to the mean height of the blade above the base drum.
+
+Axial Force Balance:
+F_cos(α_m - θ) = W (cos(α_m) + μ sin(α_m)) / (cos(θ) - μ sin(θ))
+
+From geometry:
+tan(θ) = h / (π * k * D_d)
+and
+k = h_b / D_d
+
+Where:
+h_b = blade height
+D_d = drum diameter
+
+Force expression:
+F = W (cos(α_m) + μ sin(α_m)) / (cos(θ) - μ sin(θ))
+
+For rolling torque and power to motion (for one screw), we can identify three main energy losses:
+
+a) Drum friction (base of drum on the ground):
+P_drum = (μW cos(θ) / sin(θ)) * π * D_d * n_d
+where D_d = drum diameter, n_d = RPM
+
+b) Helix blade friction (expressed as normal force at mean height of helix):
+P_b = (μF) * π * (d + h_b) * n_h / (cos(θ))
+
+c) Work against gravity and towing:
+P_w = W v sin(θ)
+
+Total power:
+P_total = P_drum + P_blade + P_w
+
+To non-dimensionalize, divide by Wv and solve:
+
+γ = total power / (Wv)
+γ = [A cos(θ) / sin(θ)] * [μ cos(θ) / (1 - μ tan(θ))] + sin(θ)
+
+Let:
+P = Tω
+ω = 2πn / 60 (rad/s)
+n = rev/s
+
+Therefore:
+T = (Wv γ) / ω
+
+Units of Force: lb-f
+W = weight of 1 screw segment
