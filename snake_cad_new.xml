@@ -1,0 +1,271 @@
+<mujoco model="screw_snake_cad">
+  <compiler angle="degree" coordinate="local" autolimits="true" inertiafromgeom="true"/>
+  <option timestep="0.001" gravity="0 0 -9.81" integrator="implicitfast" iterations="100" solver="Newton"/>
+
+  <default>
+    <geom rgba="0.8 0.8 0.8 1" condim="6" friction="6.0 0.01 0.002"
+          solref="0.003 1" solimp="0.96 0.96 0.01"/>
+    <joint armature="0.001" damping="0.05"/>
+    <motor ctrllimited="false"/>   <!-- velocity actuators -->
+  </default>
+
+  <asset>
+    <!-- NEW CAD meshes for visuals -->
+    <mesh name="cad_left"  file="NEW_SIMPLIFY_TESTER_REV_A.stl"  scale="0.01 0.01 0.01"/>
+    <mesh name="cad_right" file="NEW_TESTER_REV_B.stl"  scale="0.01 0.01 0.01"/>
+    
+    <!-- Checkerboard texture for improved ground visibility -->
+    <texture name="checker" type="2d" builtin="checker" width="512" height="512" 
+             rgb1="1.0 1.0 1.0" rgb2="0.85 0.85 0.85"/>
+    <material name="checkermat" texture="checker" texrepeat="30 30" reflectance="0.3" specular="0.5" shininess="0.5"/>
+  </asset>
+
+  <worldbody>
+    <!-- Bright lights for better visibility -->
+    <light directional="true" diffuse="0.8 0.8 0.8" specular="0.3 0.3 0.3" pos="0 0 5" dir="0 0 -1"/>
+    <light directional="true" diffuse="0.4 0.4 0.4" specular="0.1 0.1 0.1" pos="3 3 4" dir="-1 -1 -1"/>
+    <light directional="true" diffuse="0.4 0.4 0.4" specular="0.1 0.1 0.1" pos="-3 -3 4" dir="1 1 -1"/>
+    
+    <!-- Improved ground plane with checkerboard pattern -->
+    <geom name="ground" type="plane" size="10 10 0.2" material="checkermat" friction="2.5 0.01 0.002"/>
+    
+    <!-- Compliant soft mat for ribs to bite into (semi-transparent so checkerboard shows through) -->
+    <body pos="0 0 0.002">
+      <geom name="mat" type="box" size="8 8 0.002" rgba="0.28 0.28 0.28 0.2"
+            friction="6.0 0.01 0.002" solref="0.004 2.0" solimp="0.90 0.95 0.001"/>
+    </body>
+
+    <!-- Ridges: enable for X-only travel; disable for Y travel to avoid hopping -->
+    
+
+    <body name="snake_base" pos="0 0 0.15">
+      <!-- Allow translation in X, Y, Z (from snake_screws.xml) -->
+      <joint name="slide_x" type="slide" axis="1 0 0" limited="false" damping="0.2"/>
+      <joint name="slide_y" type="slide" axis="0 1 0" limited="false" damping="0.8"/>
+      <joint name="slide_z" type="slide" axis="0 0 1" limited="true" range="0.14 0.16" damping="2.0"/>
+
+      <!-- mid chassis (no contact) - heavier for more normal force -->
+      <geom name="chassis" type="box" size="0.05 0.06 0.02" pos="0 0 0.03"
+            rgba="0.1 0.15 0.2 0" mass="1.0" contype="0" conaffinity="0"/>
+
+      <!-- CENTER OBJECT: Connects screws, adds mass/inertia -->
+      <geom name="center_keel" type="box" size="0.02 0.08 0.04" pos="0 0 0"
+            rgba="0.3 0.3 0.35 0" mass="0.20"/>
+      
+      <!-- Hinge pin connecting the two screws (visible) -->
+      <geom name="hinge_pin" type="capsule" fromto="-0.1 0 0 0.1 0 0" size="0.015" 
+            rgba="0.5 0.5 0.5 1" contype="0" conaffinity="0" mass="0.05"/>
+
+      <!-- Right screw: RIGHT-HAND thread (physics from snake_screws.xml) -->
+    <body name="screw_right" pos="-0.405 0 0">
+      <joint name="jr" type="hinge" axis="1 0 0" pos="0 0 0"
+             limited="false" damping="0.001" frictionloss="0.0"/>
+      
+      <!-- CAD visual mesh -->
+      <geom name="cad_right_vis" type="mesh" mesh="cad_right"
+            pos="0.405 0 0.0204"
+            euler="0 90 0" rgba="0.85 0.2 0.2 1"
+            contype="0" conaffinity="0" mass="0"/>
+      
+      <!-- Physics geometry (invisible) -->
+      <geom name="core_screw_right" type="cylinder" fromto="-0.4 0 0  0.4 0 0"
+            size="0.0425" rgba="0.595 0.245 0.245 0" mass="0.4"
+            contype="0" conaffinity="0"/>
+      
+      <!-- Thread ribs (invisible, from snake_screws.xml) -->
+      <geom type="capsule" fromto="-0.4 -0.0111 0.0487 -0.39 -0.045 0.0217" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.39 -0.045 0.0217 -0.38 -0.045 -0.0217" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.38 -0.045 -0.0217 -0.37 -0.0111 -0.0487" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.37 -0.0111 -0.0487 -0.36 0.0312 -0.0391" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.36 0.0312 -0.0391 -0.35 0.05 0" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.35 0.05 0 -0.34 0.0312 0.0391" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.34 0.0312 0.0391 -0.33 -0.0111 0.0487" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.33 -0.0111 0.0487 -0.32 -0.045 0.0217" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.32 -0.045 0.0217 -0.31 -0.045 -0.0217" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.31 -0.045 -0.0217 -0.30 -0.0111 -0.0487" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.30 -0.0111 -0.0487 -0.29 0.0312 -0.0391" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.29 0.0312 -0.0391 -0.28 0.05 0" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.28 0.05 0 -0.27 0.0312 0.0391" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.27 0.0312 0.0391 -0.26 -0.0111 0.0487" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.26 -0.0111 0.0487 -0.25 -0.045 0.0217" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.25 -0.045 0.0217 -0.24 -0.045 -0.0217" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.24 -0.045 -0.0217 -0.23 -0.0111 -0.0487" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.23 -0.0111 -0.0487 -0.22 0.0312 -0.0391" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.22 0.0312 -0.0391 -0.21 0.05 0" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.21 0.05 0 -0.20 0.0312 0.0391" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.20 0.0312 0.0391 -0.19 -0.0111 0.0487" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.19 -0.0111 0.0487 -0.18 -0.045 0.0217" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.18 -0.045 0.0217 -0.17 -0.045 -0.0217" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.17 -0.045 -0.0217 -0.16 -0.0111 -0.0487" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.16 -0.0111 -0.0487 -0.15 0.0312 -0.0391" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.15 0.0312 -0.0391 -0.14 0.05 0" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.14 0.05 0 -0.13 0.0312 0.0391" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.13 0.0312 0.0391 -0.12 -0.0111 0.0487" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.12 -0.0111 0.0487 -0.11 -0.045 0.0217" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.11 -0.045 0.0217 -0.10 -0.045 -0.0217" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.10 -0.045 -0.0217 -0.09 -0.0111 -0.0487" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.09 -0.0111 -0.0487 -0.08 0.0312 -0.0391" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.08 0.0312 -0.0391 -0.07 0.05 0" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.07 0.05 0 -0.06 0.0312 0.0391" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.06 0.0312 0.0391 -0.05 -0.0111 0.0487" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.05 -0.0111 0.0487 -0.04 -0.045 0.0217" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.04 -0.045 0.0217 -0.03 -0.045 -0.0217" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.03 -0.045 -0.0217 -0.02 -0.0111 -0.0487" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.02 -0.0111 -0.0487 -0.01 0.0312 -0.0391" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.01 0.0312 -0.0391 0.0 0.05 0" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.0 0.05 0 0.01 0.0312 0.0391" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.01 0.0312 0.0391 0.02 -0.0111 0.0487" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.02 -0.0111 0.0487 0.03 -0.045 0.0217" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.03 -0.045 0.0217 0.04 -0.045 -0.0217" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.04 -0.045 -0.0217 0.05 -0.0111 -0.0487" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.05 -0.0111 -0.0487 0.06 0.0312 -0.0391" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.06 0.0312 -0.0391 0.07 0.05 0" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.07 0.05 0 0.08 0.0312 0.0391" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.08 0.0312 0.0391 0.09 -0.0111 0.0487" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.09 -0.0111 0.0487 0.10 -0.045 0.0217" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.10 -0.045 0.0217 0.11 -0.045 -0.0217" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.11 -0.045 -0.0217 0.12 -0.0111 -0.0487" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.12 -0.0111 -0.0487 0.13 0.0312 -0.0391" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.13 0.0312 -0.0391 0.14 0.05 0" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.14 0.05 0 0.15 0.0312 0.0391" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.15 0.0312 0.0391 0.16 -0.0111 0.0487" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.16 -0.0111 0.0487 0.17 -0.045 0.0217" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.17 -0.045 0.0217 0.18 -0.045 -0.0217" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.18 -0.045 -0.0217 0.19 -0.0111 -0.0487" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.19 -0.0111 -0.0487 0.20 0.0312 -0.0391" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.20 0.0312 -0.0391 0.21 0.05 0" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.21 0.05 0 0.22 0.0312 0.0391" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.22 0.0312 0.0391 0.23 -0.0111 0.0487" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.23 -0.0111 0.0487 0.24 -0.045 0.0217" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.24 -0.045 0.0217 0.25 -0.045 -0.0217" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.25 -0.045 -0.0217 0.26 -0.0111 -0.0487" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.26 -0.0111 -0.0487 0.27 0.0312 -0.0391" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.27 0.0312 -0.0391 0.28 0.05 0" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.28 0.05 0 0.29 0.0312 0.0391" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.29 0.0312 0.0391 0.30 -0.0111 0.0487" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.30 -0.0111 0.0487 0.31 -0.045 0.0217" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.31 -0.045 0.0217 0.32 -0.045 -0.0217" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.32 -0.045 -0.0217 0.33 -0.0111 -0.0487" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.33 -0.0111 -0.0487 0.34 0.0312 -0.0391" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.34 0.0312 -0.0391 0.35 0.05 0" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.35 0.05 0 0.36 0.0312 0.0391" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.36 0.0312 0.0391 0.37 -0.0111 0.0487" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.37 -0.0111 0.0487 0.38 -0.045 0.0217" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.38 -0.045 0.0217 0.39 -0.045 -0.0217" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.39 -0.045 -0.0217 0.40 -0.0111 -0.0487" size="0.028" rgba="0.85 0.35 0.35 0" friction="3.5 0.01 0.002" mass="0.003"/>
+    </body>
+
+      <!-- Left screw: LEFT-HAND thread (physics from snake_screws.xml) -->
+    <body name="screw_left" pos="0.405 0 0">
+      <joint name="jl" type="hinge" axis="1 0 0" pos="0 0 0"
+             limited="false" damping="0.001" frictionloss="0.0"/>
+      
+      <!-- CAD visual mesh (flipped) -->
+      <geom name="cad_left_vis" type="mesh" mesh="cad_left"
+            pos="-0.405 0 0.0204"
+            euler="0 -90 0" rgba="0.2 0.65 0.95 1"
+            contype="0" conaffinity="0" mass="0"/>
+      
+      <!-- Physics geometry (invisible) -->
+      <geom name="core_screw_left" type="cylinder" fromto="-0.4 0 0  0.4 0 0"
+            size="0.0425" rgba="0.245 0.595 0.845 0" mass="0.4"
+            contype="0" conaffinity="0"/>
+      
+      <!-- Thread ribs (invisible, mirrored from snake_screws.xml) -->
+      <geom type="capsule" fromto="-0.4 0.0111 0.0487 -0.39 0.045 0.0217" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.39 0.045 0.0217 -0.38 0.045 -0.0217" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.38 0.045 -0.0217 -0.37 0.0111 -0.0487" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.37 0.0111 -0.0487 -0.36 -0.0312 -0.0391" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.36 -0.0312 -0.0391 -0.35 -0.05 0" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.35 -0.05 0 -0.34 -0.0312 0.0391" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.34 -0.0312 0.0391 -0.33 0.0111 0.0487" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.33 0.0111 0.0487 -0.32 0.045 0.0217" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.32 0.045 0.0217 -0.31 0.045 -0.0217" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.31 0.045 -0.0217 -0.30 0.0111 -0.0487" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.30 0.0111 -0.0487 -0.29 -0.0312 -0.0391" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.29 -0.0312 -0.0391 -0.28 -0.05 0" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.28 -0.05 0 -0.27 -0.0312 0.0391" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.27 -0.0312 0.0391 -0.26 0.0111 0.0487" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.26 0.0111 0.0487 -0.25 0.045 0.0217" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.25 0.045 0.0217 -0.24 0.045 -0.0217" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.24 0.045 -0.0217 -0.23 0.0111 -0.0487" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.23 0.0111 -0.0487 -0.22 -0.0312 -0.0391" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.22 -0.0312 -0.0391 -0.21 -0.05 0" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.21 -0.05 0 -0.20 -0.0312 0.0391" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.20 -0.0312 0.0391 -0.19 0.0111 0.0487" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.19 0.0111 0.0487 -0.18 0.045 0.0217" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.18 0.045 0.0217 -0.17 0.045 -0.0217" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.17 0.045 -0.0217 -0.16 0.0111 -0.0487" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.16 0.0111 -0.0487 -0.15 -0.0312 -0.0391" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.15 -0.0312 -0.0391 -0.14 -0.05 0" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.14 -0.05 0 -0.13 -0.0312 0.0391" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.13 -0.0312 0.0391 -0.12 0.0111 0.0487" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.12 0.0111 0.0487 -0.11 0.045 0.0217" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.11 0.045 0.0217 -0.10 0.045 -0.0217" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.10 0.045 -0.0217 -0.09 0.0111 -0.0487" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.09 0.0111 -0.0487 -0.08 -0.0312 -0.0391" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.08 -0.0312 -0.0391 -0.07 -0.05 0" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.07 -0.05 0 -0.06 -0.0312 0.0391" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.06 -0.0312 0.0391 -0.05 0.0111 0.0487" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.05 0.0111 0.0487 -0.04 0.045 0.0217" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.04 0.045 0.0217 -0.03 0.045 -0.0217" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.03 0.045 -0.0217 -0.02 0.0111 -0.0487" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.02 0.0111 -0.0487 -0.01 -0.0312 -0.0391" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="-0.01 -0.0312 -0.0391 0.0 -0.05 0" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.0 -0.05 0 0.01 -0.0312 0.0391" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.01 -0.0312 0.0391 0.02 0.0111 0.0487" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.02 0.0111 0.0487 0.03 0.045 0.0217" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.03 0.045 0.0217 0.04 0.045 -0.0217" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.04 0.045 -0.0217 0.05 0.0111 -0.0487" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.05 0.0111 -0.0487 0.06 -0.0312 -0.0391" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.06 -0.0312 -0.0391 0.07 -0.05 0" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.07 -0.05 0 0.08 -0.0312 0.0391" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.08 -0.0312 0.0391 0.09 0.0111 0.0487" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.09 0.0111 0.0487 0.10 0.045 0.0217" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.10 0.045 0.0217 0.11 0.045 -0.0217" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.11 0.045 -0.0217 0.12 0.0111 -0.0487" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.12 0.0111 -0.0487 0.13 -0.0312 -0.0391" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.13 -0.0312 -0.0391 0.14 -0.05 0" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.14 -0.05 0 0.15 -0.0312 0.0391" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.15 -0.0312 0.0391 0.16 0.0111 0.0487" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.16 0.0111 0.0487 0.17 0.045 0.0217" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.17 0.045 0.0217 0.18 0.045 -0.0217" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.18 0.045 -0.0217 0.19 0.0111 -0.0487" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.19 0.0111 -0.0487 0.20 -0.0312 -0.0391" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.20 -0.0312 -0.0391 0.21 -0.05 0" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.21 -0.05 0 0.22 -0.0312 0.0391" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.22 -0.0312 0.0391 0.23 0.0111 0.0487" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.23 0.0111 0.0487 0.24 0.045 0.0217" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.24 0.045 0.0217 0.25 0.045 -0.0217" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.25 0.045 -0.0217 0.26 0.0111 -0.0487" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.26 0.0111 -0.0487 0.27 -0.0312 -0.0391" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.27 -0.0312 -0.0391 0.28 -0.05 0" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.28 -0.05 0 0.29 -0.0312 0.0391" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.29 -0.0312 0.0391 0.30 0.0111 0.0487" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.30 0.0111 0.0487 0.31 0.045 0.0217" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.31 0.045 0.0217 0.32 0.045 -0.0217" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.32 0.045 -0.0217 0.33 0.0111 -0.0487" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.33 0.0111 -0.0487 0.34 -0.0312 -0.0391" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.34 -0.0312 -0.0391 0.35 -0.05 0" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.35 -0.05 0 0.36 -0.0312 0.0391" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.36 -0.0312 0.0391 0.37 0.0111 0.0487" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.37 0.0111 0.0487 0.38 0.045 0.0217" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.38 0.045 0.0217 0.39 0.045 -0.0217" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+      <geom type="capsule" fromto="0.39 0.045 -0.0217 0.40 0.0111 -0.0487" size="0.028" rgba="0.35 0.75 0.95 0" friction="3.5 0.01 0.002" mass="0.003"/>
+    </body>
+    </body>
+  </worldbody>
+
+  <!-- Velocity motors: ctrl = target rad/s (qvel target) -->
+  <actuator>
+    <velocity name="motor_r" joint="jr" kv="150"/>
+    <velocity name="motor_l" joint="jl" kv="150"/>
+  </actuator>
+
+  <visual>
+    <map znear="0.005" zfar="100"/>
+    <quality shadowsize="4096"/>
+    <headlight ambient="0.6 0.6 0.6" diffuse="0.8 0.8 0.8" specular="0.3 0.3 0.3"/>
+  </visual>
+</mujoco>
+

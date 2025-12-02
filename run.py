@@ -28,8 +28,42 @@ os.environ.setdefault("MUJOCO_GL", "glfw")
 
 import mujoco
 import mujoco.viewer as viewer
+import xml.etree.ElementTree as ET
+import tempfile
 
-MODEL = "snake_screws.xml"
+MODEL = "snake_simple.xml"
+
+def setup_environment(base_xml_path, ground_type="normal"):
+    """
+    Modify XML to use different ground materials.
+    Returns path to modified XML file.
+    """
+    tree = ET.parse(base_xml_path)
+    root = tree.getroot()
+    
+    # Find the ground geom
+    worldbody = root.find('worldbody')
+    ground_geom = worldbody.find(".//geom[@name='ground']") if worldbody is not None else None
+    
+    if ground_geom is not None:
+        if ground_type == "sand":
+            ground_geom.set('material', 'matsand')
+            ground_geom.set('friction', '0.9 0.12 0.05')  # Realistic sand friction
+            ground_geom.set('solimp', '0.8 0.8 0.01')     # Softer contact for sand
+            ground_geom.set('solref', '0.003 1')          # Contact dynamics
+            print(f"🏖️  Environment: SAND (friction: 0.9/0.12/0.05, soft contact)")
+        else:  # normal
+            ground_geom.set('material', 'matplane')
+            ground_geom.set('friction', '6.0 0.01 0.002')  # High friction
+            ground_geom.set('solimp', '0.96 0.96 0.01')    # Stiff contact
+            ground_geom.set('solref', '0.003 1')
+            print(f"🏁 Environment: NORMAL (friction: 6.0, checker pattern)")
+    
+    # Write to temporary file
+    temp_xml = tempfile.NamedTemporaryFile(mode='w', suffix='.xml', delete=False, dir='.')
+    tree.write(temp_xml.name, encoding='unicode', xml_declaration=True)
+    temp_xml.close()
+    return temp_xml.name
 
 # Physics parameters from equations.txt
 class ScrewPhysics:
@@ -156,7 +190,15 @@ def try_combo(m, base_qpos, steps, w, sign_r, sign_l, act_r, act_l):
     return float(dtest.qpos[0] - x0)
 
 def main():
-    m = mujoco.MjModel.from_xml_path(MODEL)
+    # Check for environment type override
+    ground_type = os.environ.get("GROUND", "normal").strip().lower()
+    if ground_type not in ["normal", "sand"]:
+        ground_type = "normal"
+    
+    # Setup environment (modifies XML and returns temp file)
+    model_path = setup_environment(MODEL, ground_type)
+    
+    m = mujoco.MjModel.from_xml_path(model_path)
     d = mujoco.MjData(m)
     
     # Initialize physics model with parameters matching the XML geometry
@@ -172,16 +214,23 @@ def main():
     screws = 2
     W = total_weight / (screws * segments_per_screw)
     
+    # Adjust physics parameters based on ground type
+    if ground_type == "sand":
+        mu_ground = 0.45  # Friction coefficient for sand (based on 0.9 sliding friction)
+    else:
+        mu_ground = 0.7   # Normal hard surface
+    
     physics = ScrewPhysics(
         h_b=0.055,      # blade height (m) - from the helical ridges in XML
         D_d=0.10,       # drum diameter (m) - 2 * cylinder radius
-        mu=0.7,         # coefficient of friction (matches geom friction in XML)
+        mu=mu_ground,   # coefficient of friction (varies by ground type)
         alpha_m=0.0,    # slope angle (radians) - flat terrain for now
         W=W             # weight per screw (N)
     )
 
     # Start slightly above ground, let it settle (contact warm-up)
-    d.qpos[:2] = np.array([0, 0.10])  # x=0, z=0.1
+    if m.nq >= 3:
+        d.qpos[:3] = np.array([0.0, 0.0, 0.15])  # x=0, y=0, z=0.15
     mujoco.mj_forward(m, d)
 
     act_r = name2id(m, mujoco.mjtObj.mjOBJ_ACTUATOR, "motor_r")
@@ -196,16 +245,14 @@ def main():
     # TARGET_RPM environment variable lets you tune without code edits.
     env_rpm = os.environ.get("TARGET_RPM")
     try:
-        target_rpm = float(env_rpm) if env_rpm is not None else 60.0  # default slower
+        target_rpm = float(env_rpm) if env_rpm is not None else 150.0  # faster default
     except ValueError:
-        target_rpm = 60.0
+        target_rpm = 150.0
     target_n = target_rpm / 60.0  # Convert to rev/s
     target_omega = 2 * np.pi * target_n  # rad/s
     
-    # Let body settle into contact
-    print("\nSettling into contact...")
-    for _ in range(int(0.5 / m.opt.timestep)):
-        mujoco.mj_step(m, d)
+    # Skip settling - start immediately on ground
+    print("\nStarting simulation...")
     base_qpos = d.qpos.copy()
     
     # Auto-detect correct motor signs for +X motion (probe both opposite-sign options)
@@ -238,6 +285,15 @@ def main():
         sign_r = override_r
     if override_l is not None:
         sign_l = override_l
+    
+    # WORKAROUND: For snake_simple.xml, angled ribs only work well in one direction
+    # If user wants opposite motion, we keep motors spinning +1 but negate thrust direction
+    reverse_y_motion = False
+    if override_r == -1.0 and override_l == -1.0:
+        print("⚠️  Detected -1,-1: Reversing Y-motion direction (keeping motor spin at +1)")
+        sign_r = +1.0
+        sign_l = +1.0
+        reverse_y_motion = True
 
     print(f"✓ Rotation mode: {rotation_mode}  → Motor signs: R={sign_r:+.0f}, L={sign_l:+.0f} (probe Δx={max(dx1,dx2):+.3f} m)")
     
@@ -252,9 +308,9 @@ def main():
     # but helpful to tune translational speed without changing equations.
     env_ts = os.environ.get("THRUST_SCALE")
     try:
-        thrust_scale = float(env_ts) if env_ts is not None else 0.03
+        thrust_scale = float(env_ts) if env_ts is not None else 0.12
     except ValueError:
-        thrust_scale = 0.03
+        thrust_scale = 0.12
     anti_hop_push = 0.0           # small downward force when moving in +Y
 
     def apply_analytical_thrust():
@@ -273,7 +329,8 @@ def main():
         Fx, Fy, Fz = 0.0, 0.0, 0.0
         F_axial = physics.calculate_axial_force() * thrust_scale
         if omega_r > 0 and omega_l > 0:
-            Fy = F_axial
+            # Apply Y force, reverse if user wanted -1,-1 motion
+            Fy = -F_axial if reverse_y_motion else F_axial
             Fz = -anti_hop_push
         elif omega_r * omega_l < 0:
             Fx = F_axial

@@ -1,0 +1,27 @@
+<mujoco model="total_screw_test">
+    <!-- Files are in root directory, no meshdir needed -->
+    <compiler />
+
+    <!-- ==========================================================
+         Assets: load the total assembly STL
+         Original has 372k triangles (exceeds MuJoCo's 200k limit)
+         Using limited version with first 199k triangles
+         ========================================================== -->
+    <asset>
+        <mesh name="total_assembly"  file="TOTAL_ASSEMBLY_limited.stl" />
+    </asset>
+
+    <!-- ==========================================================
+         Worldbody: add each screw as a separate body
+         ========================================================== -->
+    <worldbody>
+
+        <!-- Total assembly -->
+        <body name="total_assembly" pos="0 0 0">
+            <geom type="mesh" mesh="total_assembly"
+                  rgba="0.7 0.7 0.8 1"
+                  contype="0" conaffinity="0" />
+        </body>
+
+    </worldbody>
+</mujoco>
